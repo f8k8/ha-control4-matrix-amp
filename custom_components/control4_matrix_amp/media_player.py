@@ -137,15 +137,14 @@ class Control4MatrixAmpMediaPlayer(MediaPlayerEntity):
         return self._available
 
     async def async_update(self) -> None:
-        """Update the state of the media player."""
-        try:
-            # Note: Control4 UDP protocol doesn't support state queries
-            # State is tracked locally when commands are sent
-            # The device is considered available if we can communicate
-            self._available = True
-        except Exception as err:
-            _LOGGER.error("Error updating output %s: %s", self._output, err)
-            self._available = False
+        """Update the state of the media player.
+        
+        Note: The Control4 UDP protocol doesn't support state queries.
+        State is tracked locally when commands are sent. This method is
+        required by Home Assistant but performs no operations since the
+        protocol doesn't provide query capabilities.
+        """
+        pass
 
     async def async_turn_on(self) -> None:
         """Turn the media player on."""
