@@ -1,0 +1,158 @@
+# Example automations for Control4 Matrix Amp
+
+# Turn on zone and set source when motion detected
+- alias: "Living Room Audio On Motion"
+  description: "Automatically turn on living room audio when motion is detected"
+  trigger:
+    - platform: state
+      entity_id: binary_sensor.living_room_motion
+      to: "on"
+  action:
+    - service: media_player.turn_on
+      target:
+        entity_id: media_player.control4_matrix_amp_zone_1
+    - service: media_player.select_source
+      target:
+        entity_id: media_player.control4_matrix_amp_zone_1
+      data:
+        source: "Input 1"
+    - service: media_player.volume_set
+      target:
+        entity_id: media_player.control4_matrix_amp_zone_1
+      data:
+        volume_level: 0.3
+
+# Multi-zone party mode
+- alias: "Party Mode All Zones"
+  description: "Sync all zones to same input for party mode"
+  trigger:
+    - platform: state
+      entity_id: input_boolean.party_mode
+      to: "on"
+  action:
+    - service: media_player.turn_on
+      target:
+        entity_id:
+          - media_player.control4_matrix_amp_zone_1
+          - media_player.control4_matrix_amp_zone_2
+          - media_player.control4_matrix_amp_zone_3
+          - media_player.control4_matrix_amp_zone_4
+    - delay:
+        seconds: 1
+    - service: control4_matrix_amp.select_source
+      target:
+        entity_id:
+          - media_player.control4_matrix_amp_zone_1
+          - media_player.control4_matrix_amp_zone_2
+          - media_player.control4_matrix_amp_zone_3
+          - media_player.control4_matrix_amp_zone_4
+      data:
+        input: 1  # Same source for all zones
+    - service: media_player.volume_set
+      target:
+        entity_id:
+          - media_player.control4_matrix_amp_zone_1
+          - media_player.control4_matrix_amp_zone_2
+          - media_player.control4_matrix_amp_zone_3
+          - media_player.control4_matrix_amp_zone_4
+      data:
+        volume_level: 0.5
+
+# Turn off party mode
+- alias: "Party Mode Off"
+  description: "Turn off all zones when party mode is disabled"
+  trigger:
+    - platform: state
+      entity_id: input_boolean.party_mode
+      to: "off"
+  action:
+    - service: media_player.turn_off
+      target:
+        entity_id:
+          - media_player.control4_matrix_amp_zone_1
+          - media_player.control4_matrix_amp_zone_2
+          - media_player.control4_matrix_amp_zone_3
+          - media_player.control4_matrix_amp_zone_4
+
+# Schedule morning music
+- alias: "Morning Music Kitchen"
+  description: "Play music in kitchen at 7 AM on weekdays"
+  trigger:
+    - platform: time
+      at: "07:00:00"
+  condition:
+    - condition: time
+      weekday:
+        - mon
+        - tue
+        - wed
+        - thu
+        - fri
+  action:
+    - service: media_player.turn_on
+      target:
+        entity_id: media_player.control4_matrix_amp_zone_2
+    - service: control4_matrix_amp.select_source
+      target:
+        entity_id: media_player.control4_matrix_amp_zone_2
+      data:
+        input: 2  # Streaming input
+    - service: media_player.volume_set
+      target:
+        entity_id: media_player.control4_matrix_amp_zone_2
+      data:
+        volume_level: 0.25
+
+# Auto-off when no one home
+- alias: "Turn Off All Zones When Away"
+  description: "Turn off all audio zones when everyone leaves"
+  trigger:
+    - platform: state
+      entity_id: group.all_persons
+      to: "not_home"
+      for:
+        minutes: 10
+  action:
+    - service: media_player.turn_off
+      target:
+        entity_id:
+          - media_player.control4_matrix_amp_zone_1
+          - media_player.control4_matrix_amp_zone_2
+          - media_player.control4_matrix_amp_zone_3
+          - media_player.control4_matrix_amp_zone_4
+          - media_player.control4_matrix_amp_zone_5
+          - media_player.control4_matrix_amp_zone_6
+
+# Volume control based on time of day
+- alias: "Evening Volume Reduction"
+  description: "Reduce volume in all zones after 10 PM"
+  trigger:
+    - platform: time
+      at: "22:00:00"
+  action:
+    - service: media_player.volume_set
+      target:
+        entity_id:
+          - media_player.control4_matrix_amp_zone_1
+          - media_player.control4_matrix_amp_zone_2
+          - media_player.control4_matrix_amp_zone_3
+      data:
+        volume_level: 0.2
+
+# Follow source - route one zone's input to another
+- alias: "Bedroom Follows Living Room"
+  description: "When living room source changes, update bedroom"
+  trigger:
+    - platform: state
+      entity_id: media_player.control4_matrix_amp_zone_1
+      attribute: source
+  condition:
+    - condition: state
+      entity_id: input_boolean.sync_bedroom_livingroom
+      state: "on"
+  action:
+    - service: media_player.select_source
+      target:
+        entity_id: media_player.control4_matrix_amp_zone_3
+      data:
+        source: "{{ trigger.to_state.attributes.source }}"

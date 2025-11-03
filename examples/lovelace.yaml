@@ -1,0 +1,206 @@
+# Example Lovelace cards for Control4 Matrix Amp
+
+# Simple entities card showing all zones
+- type: entities
+  title: Control4 Matrix Amp - All Zones
+  entities:
+    - entity: media_player.control4_matrix_amp_zone_1
+      name: Living Room
+    - entity: media_player.control4_matrix_amp_zone_2
+      name: Kitchen
+    - entity: media_player.control4_matrix_amp_zone_3
+      name: Bedroom
+    - entity: media_player.control4_matrix_amp_zone_4
+      name: Bathroom
+    - entity: media_player.control4_matrix_amp_zone_5
+      name: Patio
+    - entity: media_player.control4_matrix_amp_zone_6
+      name: Garage
+
+# Grid card with individual zone controls
+- type: grid
+  title: Audio Zones
+  columns: 2
+  square: false
+  cards:
+    - type: media-control
+      entity: media_player.control4_matrix_amp_zone_1
+    - type: media-control
+      entity: media_player.control4_matrix_amp_zone_2
+    - type: media-control
+      entity: media_player.control4_matrix_amp_zone_3
+    - type: media-control
+      entity: media_player.control4_matrix_amp_zone_4
+
+# Using custom:mini-media-player (requires HACS installation)
+- type: entities
+  title: Matrix Amp - Compact View
+  entities:
+    - entity: media_player.control4_matrix_amp_zone_1
+      type: custom:mini-media-player
+      name: Living Room
+      icon: mdi:speaker
+      hide:
+        power: false
+        source: false
+        volume: false
+    - entity: media_player.control4_matrix_amp_zone_2
+      type: custom:mini-media-player
+      name: Kitchen
+      icon: mdi:speaker
+      hide:
+        power: false
+        source: false
+        volume: false
+
+# Vertical stack with zone control and automation buttons
+- type: vertical-stack
+  title: Living Room Audio
+  cards:
+    - type: media-control
+      entity: media_player.control4_matrix_amp_zone_1
+    - type: horizontal-stack
+      cards:
+        - type: button
+          name: Input 1
+          icon: mdi:music
+          tap_action:
+            action: call-service
+            service: control4_matrix_amp.select_source
+            target:
+              entity_id: media_player.control4_matrix_amp_zone_1
+            data:
+              input: 1
+        - type: button
+          name: Input 2
+          icon: mdi:radio
+          tap_action:
+            action: call-service
+            service: control4_matrix_amp.select_source
+            target:
+              entity_id: media_player.control4_matrix_amp_zone_1
+            data:
+              input: 2
+        - type: button
+          name: Input 3
+          icon: mdi:television
+          tap_action:
+            action: call-service
+            service: control4_matrix_amp.select_source
+            target:
+              entity_id: media_player.control4_matrix_amp_zone_1
+            data:
+              input: 3
+
+# Quick volume presets card
+- type: entities
+  title: Quick Volume Presets
+  entities:
+    - type: buttons
+      entities:
+        - entity: script.volume_low_all_zones
+          name: Low
+          icon: mdi:volume-low
+        - entity: script.volume_medium_all_zones
+          name: Medium
+          icon: mdi:volume-medium
+        - entity: script.volume_high_all_zones
+          name: High
+          icon: mdi:volume-high
+
+# Dashboard with all controls (full page)
+- type: vertical-stack
+  cards:
+    - type: markdown
+      content: |
+        # 🎵 Control4 Matrix Amp
+        Control all audio zones from one place
+    
+    - type: horizontal-stack
+      cards:
+        - type: button
+          name: Party Mode
+          icon: mdi:party-popper
+          tap_action:
+            action: toggle
+            entity: input_boolean.party_mode
+        - type: button
+          name: All Off
+          icon: mdi:power
+          tap_action:
+            action: call-service
+            service: media_player.turn_off
+            target:
+              entity_id:
+                - media_player.control4_matrix_amp_zone_1
+                - media_player.control4_matrix_amp_zone_2
+                - media_player.control4_matrix_amp_zone_3
+                - media_player.control4_matrix_amp_zone_4
+    
+    - type: grid
+      columns: 2
+      square: false
+      cards:
+        - type: tile
+          entity: media_player.control4_matrix_amp_zone_1
+          name: Living Room
+          icon: mdi:sofa
+          features:
+            - type: media-player-volume
+        - type: tile
+          entity: media_player.control4_matrix_amp_zone_2
+          name: Kitchen
+          icon: mdi:chef-hat
+          features:
+            - type: media-player-volume
+        - type: tile
+          entity: media_player.control4_matrix_amp_zone_3
+          name: Bedroom
+          icon: mdi:bed
+          features:
+            - type: media-player-volume
+        - type: tile
+          entity: media_player.control4_matrix_amp_zone_4
+          name: Bathroom
+          icon: mdi:shower
+          features:
+            - type: media-player-volume
+
+# Conditional card - show only when zones are on
+- type: conditional
+  conditions:
+    - condition: or
+      conditions:
+        - condition: state
+          entity: media_player.control4_matrix_amp_zone_1
+          state: "on"
+        - condition: state
+          entity: media_player.control4_matrix_amp_zone_2
+          state: "on"
+        - condition: state
+          entity: media_player.control4_matrix_amp_zone_3
+          state: "on"
+  card:
+    type: entities
+    title: Active Zones
+    entities:
+      - entity: media_player.control4_matrix_amp_zone_1
+      - entity: media_player.control4_matrix_amp_zone_2
+      - entity: media_player.control4_matrix_amp_zone_3
+
+# Using custom button card (requires HACS)
+- type: custom:button-card
+  entity: media_player.control4_matrix_amp_zone_1
+  name: Living Room Audio
+  icon: mdi:speaker
+  show_state: true
+  tap_action:
+    action: toggle
+  hold_action:
+    action: more-info
+  styles:
+    card:
+      - height: 100px
+    name:
+      - font-size: 16px
+      - font-weight: bold

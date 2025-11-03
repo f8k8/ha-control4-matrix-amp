@@ -1,0 +1,12 @@
+{
+  "domain": "control4_matrix_amp",
+  "name": "Control4 Matrix Amp",
+  "version": "1.0.0",
+  "documentation": "https://github.com/f8k8/ha-control4-matrix-amp",
+  "issue_tracker": "https://github.com/f8k8/ha-control4-matrix-amp/issues",
+  "codeowners": ["@f8k8"],
+  "config_flow": true,
+  "dependencies": [],
+  "requirements": [],
+  "iot_class": "local_polling"
+}

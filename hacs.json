@@ -1,0 +1,7 @@
+{
+  "name": "Control4 Matrix Amp",
+  "content_in_root": false,
+  "filename": "control4_matrix_amp",
+  "render_readme": true,
+  "homeassistant": "2024.1.0"
+}
