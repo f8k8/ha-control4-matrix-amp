@@ -3,7 +3,6 @@
 DOMAIN = "control4_matrix_amp"
 
 # Configuration keys
-CONF_HOST = "host"
 CONF_PORT = "port"
 CONF_NUM_INPUTS = "num_inputs"
 CONF_NUM_OUTPUTS = "num_outputs"

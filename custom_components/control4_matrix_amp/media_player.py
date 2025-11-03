@@ -57,6 +57,7 @@ async def async_setup_entry(
     async_add_entities(entities)
 
     # Register custom service
+    hass.data.setdefault(DOMAIN, {})
     platform = hass.data[DOMAIN].get("platform")
     if not platform:
         from homeassistant.helpers import entity_platform
