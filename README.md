@@ -40,7 +40,7 @@ A Home Assistant custom component for controlling the Control4 Matrix Amp (C4-16
 3. Search for "Control4 Matrix Amp"
 4. Enter the following information:
    - **Host IP Address**: The IP address of your Control4 Matrix Amp
-   - **Port**: The port number (default: 4999)
+   - **Port**: The port number (default: 8750)
    - **Name**: A friendly name for your amp (default: "Control4 Matrix Amp")
    - **Number of Inputs**: Number of audio inputs (default: 6, max: 16)
    - **Number of Outputs**: Number of zones/outputs (default: 16, max: 16)
@@ -212,7 +212,7 @@ entities:
 
 1. **Verify IP and Port**: Ensure the Control4 Matrix Amp is accessible at the configured IP address and port
 2. **Network Connectivity**: Check that Home Assistant can reach the device on your network
-3. **Firewall**: Ensure no firewall is blocking the connection on port 4999 (or your configured port)
+3. **Firewall**: Ensure no firewall is blocking UDP traffic on port 8750 (or your configured port)
 
 ### Check Logs
 
@@ -229,15 +229,15 @@ logger:
 
 ### Communication Protocol
 
-The integration communicates with the Control4 Matrix Amp over TCP/IP using a text-based command protocol:
+The integration communicates with the Control4 Matrix Amp over UDP using the Control4 protocol:
 
-- **ROUTE \<output\> \<input\>**: Route an input to an output
-- **SETVOL \<output\> \<volume\>**: Set volume (0-100)
-- **GETVOL \<output\>**: Get current volume
-- **GETROUTE \<output\>**: Get current input source
-- **POWERON \<output\>**: Power on an output
-- **POWEROFF \<output\>**: Power off an output
-- **GETPOWER \<output\>**: Get power state
+- **c4.amp.out \<output\> 0\<input\>**: Route an input to an output (power on)
+- **c4.amp.out \<output\> 00**: Power off an output
+- **c4.amp.chvol \<output\> \<volume_hex\>**: Set volume (hex value)
+
+Commands are prefixed with a counter (0s2a + random 2-digit number) for packet identification.
+
+Note: The Control4 UDP protocol is primarily command-based and does not support state queries. The integration tracks state locally.
 
 ### Device Compatibility
 

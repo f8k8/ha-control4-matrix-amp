@@ -1,6 +1,8 @@
 """Control4 Matrix Amp communication module."""
 import asyncio
 import logging
+import random
+import socket
 from typing import Optional
 
 _LOGGER = logging.getLogger(__name__)
@@ -9,136 +11,113 @@ _LOGGER = logging.getLogger(__name__)
 class Control4MatrixAmp:
     """Class to communicate with Control4 Matrix Amp."""
 
-    def __init__(self, host: str, port: int = 4999):
+    def __init__(self, host: str, port: int = 8750):
         """Initialize the Control4 Matrix Amp."""
         self.host = host
         self.port = port
-        self._reader: Optional[asyncio.StreamReader] = None
-        self._writer: Optional[asyncio.StreamWriter] = None
         self._lock = asyncio.Lock()
-        self._connected = False
-
-    async def connect(self) -> bool:
-        """Connect to the matrix amp."""
-        try:
-            async with self._lock:
-                if self._connected:
-                    return True
-
-                self._reader, self._writer = await asyncio.wait_for(
-                    asyncio.open_connection(self.host, self.port),
-                    timeout=10.0,
-                )
-                self._connected = True
-                _LOGGER.info("Connected to Control4 Matrix Amp at %s:%s", self.host, self.port)
-                return True
-        except asyncio.TimeoutError:
-            _LOGGER.error("Timeout connecting to Control4 Matrix Amp")
-            return False
-        except Exception as err:
-            _LOGGER.error("Error connecting to Control4 Matrix Amp: %s", err)
-            return False
-
-    async def disconnect(self):
-        """Disconnect from the matrix amp."""
-        async with self._lock:
-            if self._writer:
-                try:
-                    self._writer.close()
-                    await self._writer.wait_closed()
-                except Exception as err:
-                    _LOGGER.error("Error disconnecting: %s", err)
-                finally:
-                    self._writer = None
-                    self._reader = None
-                    self._connected = False
 
     async def send_command(self, command: str) -> Optional[str]:
-        """Send a command to the matrix amp."""
-        if not self._connected:
-            if not await self.connect():
-                return None
-
+        """Send a UDP command to the matrix amp."""
         try:
             async with self._lock:
-                # Send command with proper termination
-                self._writer.write(f"{command}\r\n".encode())
-                await self._writer.drain()
-
-                # Read response with timeout
-                response = await asyncio.wait_for(
-                    self._reader.readline(),
-                    timeout=5.0,
+                # Generate counter prefix (0s2a + random 2-digit number)
+                counter = "0s2a" + str(random.randint(10, 99))
+                full_command = counter + " " + command + " \r\n"
+                
+                _LOGGER.debug("Sending command: %s", full_command)
+                
+                # Create UDP socket
+                loop = asyncio.get_event_loop()
+                sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                sock.settimeout(5.0)
+                
+                # Send command
+                await loop.run_in_executor(
+                    None,
+                    sock.sendto,
+                    bytes(full_command, "utf-8"),
+                    (self.host, self.port)
                 )
-                return response.decode().strip()
-        except asyncio.TimeoutError:
-            _LOGGER.error("Timeout waiting for response")
-            await self.disconnect()
-            return None
+                
+                # Receive response
+                try:
+                    response_bytes = await loop.run_in_executor(
+                        None,
+                        sock.recv,
+                        1024
+                    )
+                    response = str(response_bytes, "utf-8").strip()
+                    _LOGGER.debug("Command sent. Response: %s", response)
+                    sock.close()
+                    return response
+                except socket.timeout:
+                    _LOGGER.debug("No response received (timeout)")
+                    sock.close()
+                    return "OK"  # Assume success if no response
+                    
         except Exception as err:
             _LOGGER.error("Error sending command: %s", err)
-            await self.disconnect()
             return None
 
     async def set_output_source(self, output: int, input_source: int) -> bool:
         """Route an input to an output."""
-        # Control4 Matrix Amp command format: ROUTE <output> <input>
-        command = f"ROUTE {output} {input_source}"
+        # Control4 Matrix Amp command format: c4.amp.out <output> 0<input>
+        # Output should be zero-padded 2 digits, input as hex
+        output_str = f"{output:02d}"
+        input_hex = f"0{input_source:x}"
+        command = f"c4.amp.out {output_str} {input_hex}"
         response = await self.send_command(command)
-        return response is not None and "OK" in response
+        return response is not None
 
     async def set_output_volume(self, output: int, volume: int) -> bool:
         """Set volume for an output (0-100)."""
-        # Command format: SETVOL <output> <volume>
-        command = f"SETVOL {output} {volume}"
+        # Command format: c4.amp.chvol <output> <volume_hex>
+        # Volume formula: int(volume * 100 + 160) converted to hex
+        # Since volume is already 0-100, we can use: int(volume + 1.6)
+        # But based on examples, volume 0-100 maps to hex values
+        # Formula from example: int(float(volume_percent) * 100) + 160
+        output_str = f"{output:02d}"
+        volume_value = int(volume) + 160  # volume is 0-100
+        volume_hex = hex(volume_value)[2:]  # Remove '0x' prefix
+        command = f"c4.amp.chvol {output_str} {volume_hex}"
         response = await self.send_command(command)
-        return response is not None and "OK" in response
+        return response is not None
 
     async def get_output_source(self, output: int) -> Optional[int]:
         """Get the current source for an output."""
-        # Command format: GETROUTE <output>
-        command = f"GETROUTE {output}"
-        response = await self.send_command(command)
-        if response and "SOURCE" in response:
-            try:
-                # Expected response format: "SOURCE <input>"
-                return int(response.split()[1])
-            except (IndexError, ValueError):
-                _LOGGER.error("Invalid response format: %s", response)
+        # Note: Control4 protocol may not support query commands in the same way
+        # This method may need to track state locally
+        _LOGGER.debug("get_output_source not supported by Control4 UDP protocol")
         return None
 
     async def get_output_volume(self, output: int) -> Optional[int]:
         """Get the current volume for an output."""
-        # Command format: GETVOL <output>
-        command = f"GETVOL {output}"
-        response = await self.send_command(command)
-        if response and "VOLUME" in response:
-            try:
-                # Expected response format: "VOLUME <level>"
-                return int(response.split()[1])
-            except (IndexError, ValueError):
-                _LOGGER.error("Invalid response format: %s", response)
+        # Note: Control4 protocol may not support query commands in the same way
+        # This method may need to track state locally
+        _LOGGER.debug("get_output_volume not supported by Control4 UDP protocol")
         return None
 
-    async def power_on_output(self, output: int) -> bool:
-        """Power on an output."""
-        command = f"POWERON {output}"
+    async def power_on_output(self, output: int, input_source: int = 1) -> bool:
+        """Power on an output with specified input source."""
+        # Power on by routing an input to the output
+        output_str = f"{output:02d}"
+        input_hex = f"0{input_source:x}"
+        command = f"c4.amp.out {output_str} {input_hex}"
         response = await self.send_command(command)
-        return response is not None and "OK" in response
+        return response is not None
 
     async def power_off_output(self, output: int) -> bool:
         """Power off an output."""
-        command = f"POWEROFF {output}"
+        # Command format: c4.amp.out <output> 00
+        output_str = f"{output:02d}"
+        command = f"c4.amp.out {output_str} 00"
         response = await self.send_command(command)
-        return response is not None and "OK" in response
+        return response is not None
 
     async def get_output_state(self, output: int) -> Optional[bool]:
         """Get the power state of an output."""
-        command = f"GETPOWER {output}"
-        response = await self.send_command(command)
-        if response:
-            if "ON" in response:
-                return True
-            elif "OFF" in response:
-                return False
+        # Note: Control4 protocol may not support query commands in the same way
+        # This method may need to track state locally
+        _LOGGER.debug("get_output_state not supported by Control4 UDP protocol")
         return None
