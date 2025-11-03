@@ -1,0 +1,18 @@
+select_source:
+  name: Select Source
+  description: Route a specific input to an output zone
+  target:
+    entity:
+      integration: control4_matrix_amp
+      domain: media_player
+  fields:
+    input:
+      name: Input
+      description: The input number to route to this output (1-16)
+      required: true
+      example: 1
+      selector:
+        number:
+          min: 1
+          max: 16
+          mode: box
