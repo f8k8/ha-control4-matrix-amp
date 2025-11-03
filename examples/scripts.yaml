@@ -1,0 +1,193 @@
+# Example scripts for Control4 Matrix Amp
+
+# Set all zones to low volume
+volume_low_all_zones:
+  alias: "Set All Zones to Low Volume"
+  sequence:
+    - service: media_player.volume_set
+      target:
+        entity_id:
+          - media_player.control4_matrix_amp_zone_1
+          - media_player.control4_matrix_amp_zone_2
+          - media_player.control4_matrix_amp_zone_3
+          - media_player.control4_matrix_amp_zone_4
+      data:
+        volume_level: 0.2
+
+# Set all zones to medium volume
+volume_medium_all_zones:
+  alias: "Set All Zones to Medium Volume"
+  sequence:
+    - service: media_player.volume_set
+      target:
+        entity_id:
+          - media_player.control4_matrix_amp_zone_1
+          - media_player.control4_matrix_amp_zone_2
+          - media_player.control4_matrix_amp_zone_3
+          - media_player.control4_matrix_amp_zone_4
+      data:
+        volume_level: 0.5
+
+# Set all zones to high volume
+volume_high_all_zones:
+  alias: "Set All Zones to High Volume"
+  sequence:
+    - service: media_player.volume_set
+      target:
+        entity_id:
+          - media_player.control4_matrix_amp_zone_1
+          - media_player.control4_matrix_amp_zone_2
+          - media_player.control4_matrix_amp_zone_3
+          - media_player.control4_matrix_amp_zone_4
+      data:
+        volume_level: 0.8
+
+# Quick party mode setup
+party_mode_start:
+  alias: "Start Party Mode"
+  sequence:
+    - service: media_player.turn_on
+      target:
+        entity_id:
+          - media_player.control4_matrix_amp_zone_1
+          - media_player.control4_matrix_amp_zone_2
+          - media_player.control4_matrix_amp_zone_3
+          - media_player.control4_matrix_amp_zone_4
+          - media_player.control4_matrix_amp_zone_5
+    - delay:
+        seconds: 2
+    - service: control4_matrix_amp.select_source
+      target:
+        entity_id:
+          - media_player.control4_matrix_amp_zone_1
+          - media_player.control4_matrix_amp_zone_2
+          - media_player.control4_matrix_amp_zone_3
+          - media_player.control4_matrix_amp_zone_4
+          - media_player.control4_matrix_amp_zone_5
+      data:
+        input: 1
+    - service: media_player.volume_set
+      target:
+        entity_id:
+          - media_player.control4_matrix_amp_zone_1
+          - media_player.control4_matrix_amp_zone_2
+          - media_player.control4_matrix_amp_zone_3
+          - media_player.control4_matrix_amp_zone_4
+          - media_player.control4_matrix_amp_zone_5
+      data:
+        volume_level: 0.6
+
+# Stop all zones
+all_zones_off:
+  alias: "Turn Off All Audio Zones"
+  sequence:
+    - service: media_player.turn_off
+      target:
+        entity_id:
+          - media_player.control4_matrix_amp_zone_1
+          - media_player.control4_matrix_amp_zone_2
+          - media_player.control4_matrix_amp_zone_3
+          - media_player.control4_matrix_amp_zone_4
+          - media_player.control4_matrix_amp_zone_5
+          - media_player.control4_matrix_amp_zone_6
+          - media_player.control4_matrix_amp_zone_7
+          - media_player.control4_matrix_amp_zone_8
+
+# Morning routine - kitchen and bathroom
+morning_routine:
+  alias: "Morning Audio Routine"
+  sequence:
+    - service: media_player.turn_on
+      target:
+        entity_id:
+          - media_player.control4_matrix_amp_zone_2  # Kitchen
+          - media_player.control4_matrix_amp_zone_4  # Bathroom
+    - delay:
+        seconds: 1
+    - service: control4_matrix_amp.select_source
+      target:
+        entity_id:
+          - media_player.control4_matrix_amp_zone_2
+          - media_player.control4_matrix_amp_zone_4
+      data:
+        input: 2  # Radio/streaming
+    - service: media_player.volume_set
+      target:
+        entity_id:
+          - media_player.control4_matrix_amp_zone_2
+          - media_player.control4_matrix_amp_zone_4
+      data:
+        volume_level: 0.25
+
+# Evening routine - living room
+evening_routine:
+  alias: "Evening Audio Routine"
+  sequence:
+    - service: media_player.turn_on
+      target:
+        entity_id: media_player.control4_matrix_amp_zone_1  # Living room
+    - delay:
+        seconds: 1
+    - service: control4_matrix_amp.select_source
+      target:
+        entity_id: media_player.control4_matrix_amp_zone_1
+      data:
+        input: 3  # TV audio
+    - service: media_player.volume_set
+      target:
+        entity_id: media_player.control4_matrix_amp_zone_1
+      data:
+        volume_level: 0.4
+
+# Sync zones to living room
+sync_to_living_room:
+  alias: "Sync All Zones to Living Room"
+  sequence:
+    - service: control4_matrix_amp.select_source
+      target:
+        entity_id:
+          - media_player.control4_matrix_amp_zone_2
+          - media_player.control4_matrix_amp_zone_3
+          - media_player.control4_matrix_amp_zone_4
+      data:
+        input: "{{ state_attr('media_player.control4_matrix_amp_zone_1', 'source').split()[1] | int }}"
+
+# Quick input switcher for living room
+living_room_switch_input:
+  alias: "Living Room Switch Input"
+  fields:
+    input_number:
+      description: "Input number to switch to (1-6)"
+      example: 1
+  sequence:
+    - service: control4_matrix_amp.select_source
+      target:
+        entity_id: media_player.control4_matrix_amp_zone_1
+      data:
+        input: "{{ input_number }}"
+
+# Outdoor zones (patio + garage)
+outdoor_audio_on:
+  alias: "Turn On Outdoor Audio"
+  sequence:
+    - service: media_player.turn_on
+      target:
+        entity_id:
+          - media_player.control4_matrix_amp_zone_5  # Patio
+          - media_player.control4_matrix_amp_zone_6  # Garage
+    - delay:
+        seconds: 1
+    - service: control4_matrix_amp.select_source
+      target:
+        entity_id:
+          - media_player.control4_matrix_amp_zone_5
+          - media_player.control4_matrix_amp_zone_6
+      data:
+        input: 1
+    - service: media_player.volume_set
+      target:
+        entity_id:
+          - media_player.control4_matrix_amp_zone_5
+          - media_player.control4_matrix_amp_zone_6
+      data:
+        volume_level: 0.5
