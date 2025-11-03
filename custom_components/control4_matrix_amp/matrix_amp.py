@@ -23,7 +23,14 @@ class Control4MatrixAmp:
         self._lock = asyncio.Lock()
 
     async def send_command(self, command: str) -> Optional[str]:
-        """Send a UDP command to the matrix amp."""
+        """Send a UDP command to the matrix amp.
+        
+        Note: Creates a new UDP socket for each command. This is intentional as:
+        1. UDP is connectionless, so there's no persistent connection to maintain
+        2. Creating UDP sockets is lightweight compared to TCP
+        3. Ensures clean state for each command
+        4. Avoids issues with socket timeout/error states
+        """
         sock = None
         try:
             async with self._lock:
@@ -33,7 +40,7 @@ class Control4MatrixAmp:
                 
                 _LOGGER.debug("Sending command: %s", full_command)
                 
-                # Create UDP socket
+                # Create UDP socket for this command
                 loop = asyncio.get_event_loop()
                 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
                 sock.setblocking(False)
@@ -66,17 +73,30 @@ class Control4MatrixAmp:
             if sock:
                 sock.close()
 
+    def _validate_input_source(self, input_source: int) -> bool:
+        """Validate input source is in valid range.
+        
+        Args:
+            input_source: Input source number to validate
+            
+        Returns:
+            True if valid, False otherwise
+            
+        Note: Input values must be 1-15 to fit in single hex digit format (e.g., '01', '0f').
+        """
+        if not 1 <= input_source <= 15:
+            _LOGGER.error("Input source must be between 1 and 15, got %d", input_source)
+            return False
+        return True
+
     async def set_output_source(self, output: int, input_source: int) -> bool:
         """Route an input to an output.
         
         Args:
             output: Output number (1-16)
-            input_source: Input source number (1-6)
-        
-        Note: Input values must be 1-15 to fit in single hex digit format (0x).
+            input_source: Input source number (1-15)
         """
-        if not 1 <= input_source <= 15:
-            _LOGGER.error("Input source must be between 1 and 15, got %d", input_source)
+        if not self._validate_input_source(input_source):
             return False
             
         output_str = f"{output:02d}"
@@ -125,8 +145,7 @@ class Control4MatrixAmp:
         
         Power on is achieved by routing an input to the output.
         """
-        if not 1 <= input_source <= 15:
-            _LOGGER.error("Input source must be between 1 and 15, got %d", input_source)
+        if not self._validate_input_source(input_source):
             return False
             
         output_str = f"{output:02d}"

@@ -149,10 +149,10 @@ class Control4MatrixAmpMediaPlayer(MediaPlayerEntity):
     async def async_turn_on(self) -> None:
         """Turn the media player on."""
         # Use current source or default to input 1
-        input_source = self._current_source if self._current_source else 1
+        input_source = self._current_source if self._current_source is not None else 1
         await self._matrix_amp.power_on_output(self._output, input_source)
         self._state = MediaPlayerState.ON
-        if not self._current_source:
+        if self._current_source is None:
             self._current_source = input_source
 
     async def async_turn_off(self) -> None:
