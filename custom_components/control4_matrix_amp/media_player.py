@@ -137,37 +137,23 @@ class Control4MatrixAmpMediaPlayer(MediaPlayerEntity):
         return self._available
 
     async def async_update(self) -> None:
-        """Update the state of the media player."""
-        try:
-            # Get power state
-            power_state = await self._matrix_amp.get_output_state(self._output)
-            if power_state is not None:
-                self._state = (
-                    MediaPlayerState.ON if power_state else MediaPlayerState.OFF
-                )
-            else:
-                self._state = MediaPlayerState.OFF
-
-            # Get current source
-            if power_state:
-                source = await self._matrix_amp.get_output_source(self._output)
-                if source is not None:
-                    self._current_source = source
-
-                # Get volume
-                volume = await self._matrix_amp.get_output_volume(self._output)
-                if volume is not None:
-                    self._volume = volume
-
-            self._available = True
-        except Exception as err:
-            _LOGGER.error("Error updating output %s: %s", self._output, err)
-            self._available = False
+        """Update the state of the media player.
+        
+        Note: The Control4 UDP protocol doesn't support state queries.
+        State is tracked locally when commands are sent. This method is
+        required by Home Assistant but performs no operations since the
+        protocol doesn't provide query capabilities.
+        """
+        pass
 
     async def async_turn_on(self) -> None:
         """Turn the media player on."""
-        await self._matrix_amp.power_on_output(self._output)
+        # Use current source or default to input 1
+        input_source = self._current_source if self._current_source is not None else 1
+        await self._matrix_amp.power_on_output(self._output, input_source)
         self._state = MediaPlayerState.ON
+        if self._current_source is None:
+            self._current_source = input_source
 
     async def async_turn_off(self) -> None:
         """Turn the media player off."""

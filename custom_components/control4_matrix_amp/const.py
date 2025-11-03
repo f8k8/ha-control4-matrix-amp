@@ -8,7 +8,7 @@ CONF_NUM_INPUTS = "num_inputs"
 CONF_NUM_OUTPUTS = "num_outputs"
 
 # Default values
-DEFAULT_PORT = 4999
+DEFAULT_PORT = 8750
 DEFAULT_NUM_INPUTS = 6
 DEFAULT_NUM_OUTPUTS = 16
 DEFAULT_NAME = "Control4 Matrix Amp"
