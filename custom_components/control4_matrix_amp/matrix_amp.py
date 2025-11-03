@@ -19,6 +19,7 @@ class Control4MatrixAmp:
 
     async def send_command(self, command: str) -> Optional[str]:
         """Send a UDP command to the matrix amp."""
+        sock = None
         try:
             async with self._lock:
                 # Generate counter prefix (0s2a + random 2-digit number)
@@ -30,35 +31,35 @@ class Control4MatrixAmp:
                 # Create UDP socket
                 loop = asyncio.get_event_loop()
                 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                sock.settimeout(5.0)
+                sock.setblocking(False)
                 
                 # Send command
-                await loop.run_in_executor(
-                    None,
-                    sock.sendto,
+                await loop.sock_sendto(
+                    sock,
                     bytes(full_command, "utf-8"),
                     (self.host, self.port)
                 )
                 
-                # Receive response
+                # Receive response with timeout
                 try:
-                    response_bytes = await loop.run_in_executor(
-                        None,
-                        sock.recv,
-                        1024
+                    response_bytes = await asyncio.wait_for(
+                        loop.sock_recv(sock, 1024),
+                        timeout=2.0
                     )
                     response = str(response_bytes, "utf-8").strip()
                     _LOGGER.debug("Command sent. Response: %s", response)
-                    sock.close()
                     return response
-                except socket.timeout:
+                except asyncio.TimeoutError:
                     _LOGGER.debug("No response received (timeout)")
-                    sock.close()
-                    return "OK"  # Assume success if no response
+                    # UDP protocol may not always send responses, return None to indicate unknown status
+                    return None
                     
         except Exception as err:
             _LOGGER.error("Error sending command: %s", err)
             return None
+        finally:
+            if sock:
+                sock.close()
 
     async def set_output_source(self, output: int, input_source: int) -> bool:
         """Route an input to an output."""
@@ -71,15 +72,18 @@ class Control4MatrixAmp:
         return response is not None
 
     async def set_output_volume(self, output: int, volume: int) -> bool:
-        """Set volume for an output (0-100)."""
-        # Command format: c4.amp.chvol <output> <volume_hex>
-        # Volume formula: int(volume * 100 + 160) converted to hex
-        # Since volume is already 0-100, we can use: int(volume + 1.6)
-        # But based on examples, volume 0-100 maps to hex values
-        # Formula from example: int(float(volume_percent) * 100) + 160
+        """Set volume for an output (0-100).
+        
+        Args:
+            output: Output number (1-16)
+            volume: Volume level 0-100
+            
+        The Control4 protocol expects volume as: (volume + 160) in hexadecimal.
+        For example: volume 50 -> (50 + 160) = 210 = 0xd2
+        """
         output_str = f"{output:02d}"
-        volume_value = int(volume) + 160  # volume is 0-100
-        volume_hex = hex(volume_value)[2:]  # Remove '0x' prefix
+        volume_value = int(volume) + 160
+        volume_hex = hex(volume_value)[2:]
         command = f"c4.amp.chvol {output_str} {volume_hex}"
         response = await self.send_command(command)
         return response is not None
